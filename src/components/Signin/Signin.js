@@ -26,11 +26,12 @@ class Signin extends Component {
             })
         })
         .then(response => response.json())
-        .then(data => {
-            if (data === 'OK') {
+        .then(user => {
+            if (user.id) {
+                this.props.loadUser(user)
                 this.props.routeChange('mainpage');        
             } else {
-                console.log(data);
+                console.log('[ERROR]');
             }
         })
     }

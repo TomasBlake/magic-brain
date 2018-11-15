@@ -43,7 +43,14 @@ class App extends Component {
       height: ''
     },
     route: 'signin',
-    isSignIn: false
+    isSignIn: false,
+    profile: {
+      id: '',
+      name: '',
+      email: '',
+      entries: 0,
+      joined: ''
+    }
   }
 
   onInputChangeHandler = (event) => {
@@ -51,9 +58,28 @@ class App extends Component {
   }
 
   onSubmitHandler = () => {
+    console.log('[CURRENTPROFILE]', this.state.profile.id)
     this.setState({imageUrl: this.state.input});
     app.models.predict(Clarifai.FACE_DETECT_MODEL,this.state.input)
     .then(response => {
+      if (response) {
+        fetch('http://localhost:3000/image',{
+          method: 'put',
+          headers: {'content-type': 'application/json'},
+          body: JSON.stringify({
+            id: this.state.profile.id 
+          })})
+          .then(response => response.json())
+          .then(data => {
+            console.log('[DATA]', data)
+            this.setState({
+              profile: {
+                ...this.state.profile,
+                entries: data.entries
+              }
+            })
+        });
+      }
     console.log('[RESPONSE]', response.outputs[0].data.regions[0].region_info.bounding_box)
     this.calculateFaceLocation(response)})
     .catch(err => console.log(err));
@@ -87,8 +113,21 @@ class App extends Component {
     }
     this.setState({route: route})
   }
+
+  loadUser = (user) => {
+    this.setState({
+      profile: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        entries: user.entries,
+        joined: user.joined
+      } 
+    })
+  }
   
   render() {
+    console.log('[PROFILE]', this.state.profile);
     const {isSignIn, imgDimenzions, box, imageUrl} = this.state;
     let routes;
     switch (this.state.route) {
@@ -97,17 +136,17 @@ class App extends Component {
         <>
         <Navigation isSignIn={isSignIn} routeChange={this.onRouteChangeHandler} />
         <Logo />
-        <Rank />
+        <Rank name={this.state.profile.name} entries={this.state.profile.entries} />
         <ImageLinkForm changed={this.onInputChangeHandler} submited={this.onSubmitHandler}/>
         <FaceRecognition boxSizes={imgDimenzions} recogBox={box} url={imageUrl} />
         </>
         );
         break;  
       case ('signin'):
-        routes = (<Signin routeChange={this.onRouteChangeHandler} />);  
+        routes = (<Signin loadUser={this.loadUser} routeChange={this.onRouteChangeHandler} />);  
         break;
       case ('register'):
-        routes = (<Register routeChange={this.onRouteChangeHandler}/>);  
+        routes = (<Register loadUser={this.loadUser} routeChange={this.onRouteChangeHandler}/>);  
         break;
       default:
         routes = ( 
